@@ -1,125 +1,73 @@
 ﻿using Newtonsoft.Json;
-using StockAnalyzer.Core;
 using StockAnalyzer.Core.Domain;
-using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
-using System.Linq;
 using System.Net;
-using System.Net.Http;
 using System.Threading;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Navigation;
 
-namespace StockAnalyzer.Windows
+namespace StockAnalyzer.Windows;
+
+public partial class MainWindow : Window
 {
-    public partial class MainWindow : Window
+    private static string API_URL = "https://ps-async.fekberg.com/api/stocks";
+    private Stopwatch stopwatch = new Stopwatch();
+
+    public MainWindow()
     {
-        private static string API_URL = "https://ps-async.fekberg.com/api/stocks";
-        private Stopwatch stopwatch = new Stopwatch();
-
-        public MainWindow()
-        {
-            InitializeComponent();
-        }
+        InitializeComponent();
+    }
 
 
 
-        private void Search_Click(object sender, RoutedEventArgs e)
-        {
-            try
-            {
-                BeforeLoadingStockData();
+    private void Search_Click(object sender, RoutedEventArgs e)
+    {
+        BeforeLoadingStockData();
 
-                var loadLinesTask = Task.Run(() => {
-                    // This code now runs in a separate thread
-                    var lines = File.ReadAllLines("StockPrices_Small.csv");
+        var client = new WebClient();
 
-                    return lines;
-                });
+        var content = client.DownloadString($"{API_URL}/{StockIdentifier.Text}");
 
-                var processStocksTask = loadLinesTask.ContinueWith(completedTask =>
-                {
-                    var lines = completedTask.Result;
+        // Simulate that the web call takes a very long time
+        Thread.Sleep(10000);
 
-                    var data = new List<StockPrice>();
+        var data = JsonConvert.DeserializeObject<IEnumerable<StockPrice>>(content);
 
-                    foreach (var line in lines.Skip(1))
-                    {
-                        var price = StockPrice.FromCSV(line);
+        Stocks.ItemsSource = data;
 
-                        data.Add(price);
-                    }
-
-                    // this allows us to pass our code into UI thread for execution
-                    Dispatcher.Invoke(() =>
-                    {
-                        // Warning, do not do here anything heavy or anything that might block the UI thread.
-                        Stocks.ItemsSource = data.Where(sp => sp.Identifier == StockIdentifier.Text);
-                    });
-                });
-
-                processStocksTask.ContinueWith(_ => {
-                    Dispatcher.Invoke(() => {
-                        AfterLoadingStockData();
-                    });
-                });
-            }
-            catch (Exception ex)
-            {
-                Notes.Text = ex.Message;
-            }
-            finally 
-            {
-            }
-        }
-
-        private async Task GetStocks()
-        {
-            try
-            {
-                var store = new DataStore();
-
-                var responseTask = store.GetStockPrices(StockIdentifier.Text);
-                
-                Stocks.ItemsSource = await responseTask;
-            }
-            catch (Exception ex)
-            {
-                throw ex;
-            }
-        }
+        AfterLoadingStockData();
+    }
 
 
 
 
 
 
-        private void BeforeLoadingStockData()
-        {
-            stopwatch.Restart();
-            StockProgress.Visibility = Visibility.Visible;
-            StockProgress.IsIndeterminate = true;
-        }
 
-        private void AfterLoadingStockData()
-        {
-            StocksStatus.Text = $"Loaded stocks for {StockIdentifier.Text} in {stopwatch.ElapsedMilliseconds}ms";
-            StockProgress.Visibility = Visibility.Hidden;
-        }
 
-        private void Hyperlink_OnRequestNavigate(object sender, RequestNavigateEventArgs e)
-        {
-            Process.Start(new ProcessStartInfo(e.Uri.AbsoluteUri));
+    private void BeforeLoadingStockData()
+    {
+        stopwatch.Restart();
+        StockProgress.Visibility = Visibility.Visible;
+        StockProgress.IsIndeterminate = true;
+    }
 
-            e.Handled = true;
-        }
+    private void AfterLoadingStockData()
+    {
+        StocksStatus.Text = $"Loaded stocks for {StockIdentifier.Text} in {stopwatch.ElapsedMilliseconds}ms";
+        StockProgress.Visibility = Visibility.Hidden;
+    }
 
-        private void Close_OnClick(object sender, RoutedEventArgs e)
-        {
-            Application.Current.Shutdown();
-        }
+    private void Hyperlink_OnRequestNavigate(object sender, RequestNavigateEventArgs e)
+    {
+        Process.Start(new ProcessStartInfo { FileName = e.Uri.AbsoluteUri, UseShellExecute = true });
+
+        e.Handled = true;
+    }
+
+    private void Close_OnClick(object sender, RoutedEventArgs e)
+    {
+        Application.Current.Shutdown();
     }
 }

@@ -18,16 +18,13 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
     }
-
-
-
     private void Search_Click(object sender, RoutedEventArgs e)
     {
         BeforeLoadingStockData();
 
         var client = new WebClient();
 
-        var content = client.DownloadString($"{API_URL}/{StockIdentifier.Text}");
+        var content = client.DownloadString($"https://localhost:7271/WeatherForecast\r\n");
 
         // Simulate that the web call takes a very long time
         Thread.Sleep(10000);
@@ -38,34 +35,23 @@ public partial class MainWindow : Window
 
         AfterLoadingStockData();
     }
-
-
-
-
-
-
-
-
     private void BeforeLoadingStockData()
     {
         stopwatch.Restart();
         StockProgress.Visibility = Visibility.Visible;
         StockProgress.IsIndeterminate = true;
     }
-
     private void AfterLoadingStockData()
     {
         StocksStatus.Text = $"Loaded stocks for {StockIdentifier.Text} in {stopwatch.ElapsedMilliseconds}ms";
         StockProgress.Visibility = Visibility.Hidden;
     }
-
     private void Hyperlink_OnRequestNavigate(object sender, RequestNavigateEventArgs e)
     {
         Process.Start(new ProcessStartInfo { FileName = e.Uri.AbsoluteUri, UseShellExecute = true });
 
         e.Handled = true;
     }
-
     private void Close_OnClick(object sender, RoutedEventArgs e)
     {
         Application.Current.Shutdown();

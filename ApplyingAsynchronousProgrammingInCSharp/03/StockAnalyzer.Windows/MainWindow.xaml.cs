@@ -33,8 +33,15 @@ public partial class MainWindow : Window
         {
             BeforeLoadingStockData();
 
-            var loadLinesTask = Task.Run(() => {
-                var lines = File.ReadAllLines("StockPrices_Small.csv");
+            var loadLinesTask = Task.Run(async () => {
+                using var stream = new StreamReader(File.OpenRead("StockPrices_Small.csv"));
+
+                var lines = new List<string>();
+
+                while (await stream.ReadLineAsync() is string line) 
+                {
+                    lines.Add(line);
+                }
                 return lines;
             });
 
